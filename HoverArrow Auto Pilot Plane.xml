@@ -1,0 +1,928 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Program name="HoverArrow Auto Pilot Plane">
+  <Variables />
+  <Instructions>
+    <Event event="ReceiveMessage" id="0" style="receive-msg" pos="-304.59,-79.1066">
+      <Constant canReplace="false" text="Start Drone Program" />
+    </Event>
+    <Comment id="1" style="comment">
+      <Constant style="comment-text" canReplace="false" text="Save The Runway Data" />
+    </Comment>
+    <SetVariable id="2" style="set-variable">
+      <Constant text="Runway_Altitude" />
+      <EvaluateExpression style="evaluate-expression">
+        <Constant text="FD.AltitudeAboveSeaLevel" />
+      </EvaluateExpression>
+    </SetVariable>
+    <SetVariable id="3" style="set-variable">
+      <Constant text="Runway_Coordinate" />
+      <Planet op="toLatLongAgl" style="planet-to-lat-long-agl">
+        <EvaluateExpression style="evaluate-expression">
+          <Constant text="FD.Position" />
+        </EvaluateExpression>
+      </Planet>
+    </SetVariable>
+    <SetVariable id="4" style="set-variable">
+      <Constant text="Runway_Vector" />
+      <EvaluateExpression style="evaluate-expression">
+        <Constant text="normalize (FD.CraftForward - project (FD.CraftForward, FD.Position))" />
+      </EvaluateExpression>
+    </SetVariable>
+    <BroadcastMessage global="false" local="false" id="5" style="broadcast-msg-craft">
+      <Constant text="Auto Pilot Program" />
+      <Variable list="false" local="true" variableName="data" />
+    </BroadcastMessage>
+    <BroadcastMessage global="false" local="false" id="6" style="broadcast-msg-craft">
+      <Constant text="Terrain Height Scanner" />
+      <Variable list="false" local="true" variableName="data" />
+    </BroadcastMessage>
+    <BroadcastMessage global="false" local="false" id="7" style="broadcast-msg-craft">
+      <Constant text="Start Takeoff Program" />
+      <Variable list="false" local="true" variableName="data" />
+    </BroadcastMessage>
+  </Instructions>
+  <Instructions>
+    <Event event="ReceiveMessage" id="8" style="receive-msg" pos="-305.0262,-514.8907">
+      <Constant canReplace="false" text="Terrain Height Scanner" />
+    </Event>
+    <Comment id="9" style="comment">
+      <Constant style="comment-text" canReplace="false" text="Find The Maximum Height" />
+    </Comment>
+    <SetVariable id="10" style="set-variable">
+      <Constant text="Maximum_Height" />
+      <EvaluateExpression style="evaluate-expression">
+        <Constant text="Runway_Altitude" />
+      </EvaluateExpression>
+    </SetVariable>
+    <WaitSeconds id="11" style="wait-seconds">
+      <Constant number="1" />
+    </WaitSeconds>
+    <For var="Y" id="12" style="for">
+      <Constant text="1" />
+      <Constant text="10000" />
+      <Constant text="200" />
+      <Instructions>
+        <SetVariable id="13" style="set-variable">
+          <Constant text="Height_Sign" />
+          <Constant text="1" />
+        </SetVariable>
+        <Repeat id="14" style="repeat">
+          <Constant text="2" />
+          <Instructions>
+            <ChangeVariable id="15" style="change-variable">
+              <Constant text="Scanned_Percentage" />
+              <Constant text="1" />
+            </ChangeVariable>
+            <For var="X" id="16" style="for">
+              <Constant text="-10000" />
+              <Constant text="10000" />
+              <Constant text="200" />
+              <Instructions>
+                <SetVariable id="17" style="set-variable">
+                  <Constant text="Saved_Position" />
+                  <Planet op="toPosition" style="planet-to-position">
+                    <EvaluateExpression style="evaluate-expression">
+                      <Constant text="v:Runway_Coordinate" />
+                    </EvaluateExpression>
+                  </Planet>
+                </SetVariable>
+                <SetVariable id="18" style="set-variable">
+                  <Constant text="Horizontal_Vector" />
+                  <EvaluateExpression style="evaluate-expression">
+                    <Constant text="normalize (cross (v:Saved_Position, v:Runway_Vector))" />
+                  </EvaluateExpression>
+                </SetVariable>
+                <SetVariable id="19" style="set-variable">
+                  <Constant text="Scan_Position" />
+                  <EvaluateExpression style="evaluate-expression">
+                    <Constant text="v:Saved_Position + (v:Runway_Vector * Height_Sign * Y) + (v:Horizontal_Vector * X)" />
+                  </EvaluateExpression>
+                </SetVariable>
+                <SetVariable id="20" style="set-variable">
+                  <Constant text="Terrain_Height" />
+                  <CraftProperty property="Terrain.Height" style="terrain-query">
+                    <Planet op="toLatLongAgl" style="planet-to-lat-long-agl">
+                      <EvaluateExpression style="evaluate-expression">
+                        <Constant text="v:Scan_Position" />
+                      </EvaluateExpression>
+                    </Planet>
+                  </CraftProperty>
+                </SetVariable>
+                <SetVariable id="21" style="set-variable">
+                  <Constant text="Maximum_Height" />
+                  <EvaluateExpression style="evaluate-expression">
+                    <Constant text="max (Maximum_Height, Terrain_Height)" />
+                  </EvaluateExpression>
+                </SetVariable>
+                <SetVariable id="22" style="set-variable">
+                  <Constant text="Terrain_Altitude" />
+                  <EvaluateExpression style="evaluate-expression">
+                    <Constant text="Maximum_Height" />
+                  </EvaluateExpression>
+                </SetVariable>
+                <SetVariable id="23" style="set-variable">
+                  <Constant text="Set_Altitude" />
+                  <EvaluateExpression style="evaluate-expression">
+                    <Constant text="!AG4? (Terrain_Altitude + Max_Altitude) : Set_Altitude" />
+                  </EvaluateExpression>
+                </SetVariable>
+                <LogFlight id="24" style="flightlog">
+                  <StringOp op="format" style="format">
+                    <Constant text="&lt;color=#00BFFF&gt;Scanning Terrain Height : {0:n0}%  |  Maximum Terrain Height : {1:n0}m" />
+                    <EvaluateExpression style="evaluate-expression">
+                      <Constant text="(Scanned_Percentage / 100) * 100" />
+                    </EvaluateExpression>
+                    <EvaluateExpression style="evaluate-expression">
+                      <Constant text="Maximum_Height" />
+                    </EvaluateExpression>
+                    <Constant text="" />
+                  </StringOp>
+                  <Constant style="true" bool="true" />
+                </LogFlight>
+              </Instructions>
+            </For>
+            <SetVariable id="25" style="set-variable">
+              <Constant text="Height_Sign" />
+              <Constant text="-1" />
+            </SetVariable>
+          </Instructions>
+        </Repeat>
+      </Instructions>
+    </For>
+    <LogFlight id="26" style="flightlog">
+      <Constant text="&lt;color=#FFFFFF&gt;Scanning Maximum Terrain Height Has Stopped" />
+      <Constant style="true" bool="true" />
+    </LogFlight>
+    <SetCraftProperty property="Sound.Beep" id="27" style="play-beep">
+      <Constant number="1000" />
+      <Constant number="1" />
+      <Constant text="0.5" />
+    </SetCraftProperty>
+  </Instructions>
+  <Instructions>
+    <Event event="ReceiveMessage" id="28" style="receive-msg" pos="-305.2839,-1501.684">
+      <Constant canReplace="false" text="Auto Pilot Program" />
+    </Event>
+    <Comment id="29" style="comment">
+      <Constant style="comment-text" canReplace="false" text="Create Variables" />
+    </Comment>
+    <SetVariable id="30" style="set-variable">
+      <Constant text="Set_Speed" />
+      <Constant text="00" />
+    </SetVariable>
+    <SetVariable id="31" style="set-variable">
+      <Constant text="Set_Altitude" />
+      <Constant text="00" />
+    </SetVariable>
+    <SetVariable id="32" style="set-variable">
+      <Constant text="Alignment_Vector" />
+      <EvaluateExpression style="evaluate-expression">
+        <Constant text="v:Runway_Vector" />
+      </EvaluateExpression>
+    </SetVariable>
+    <While id="33" style="while">
+      <EvaluateExpression style="evaluate-expression">
+        <Constant text="! (AG4 &amp; FD.Grounded)" />
+      </EvaluateExpression>
+      <Instructions>
+        <Comment id="34" style="comment">
+          <Constant style="comment-text" canReplace="false" text="Drone Flight Data" />
+        </Comment>
+        <SetVariable id="35" style="set-variable">
+          <Constant text="Ground_Altitude" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="FD.AltitudeAboveGroundLevel" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="36" style="set-variable">
+          <Constant text="Current_Altitude" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="FD.AltitudeAboveSeaLevel" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="37" style="set-variable">
+          <Constant text="Current_Position" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="FD.Position" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="38" style="set-variable">
+          <Constant text="Runway_Position" />
+          <Planet op="toPosition" style="planet-to-position">
+            <EvaluateExpression style="evaluate-expression">
+              <Constant text="v:Runway_Coordinate" />
+            </EvaluateExpression>
+          </Planet>
+        </SetVariable>
+        <SetVariable id="39" style="set-variable">
+          <Constant text="HoverArrow_Position" />
+          <CraftProperty property="Craft.Position" style="craft">
+            <CraftProperty property="Craft.NameToID" style="craft-id">
+              <Constant text="HoverArrow" />
+            </CraftProperty>
+          </CraftProperty>
+        </SetVariable>
+        <SetVariable id="40" style="set-variable">
+          <Constant text="Angular_Velocity" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="FD.AngularVelocity" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="41" style="set-variable">
+          <Constant text="Vertical_Velocity" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="FD.VerticalSurfaceVelocity" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="42" style="set-variable">
+          <Constant text="Surface_Velocity" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="FD.SurfaceVelocity" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="43" style="set-variable">
+          <Constant text="Pitch_Axis" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="FD.CraftRight" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="44" style="set-variable">
+          <Constant text="Flatten_Pitch" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="normalize (v:Pitch_Axis - project (v:Pitch_Axis, v:Current_Position))" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="45" style="set-variable">
+          <Constant text="Yaw_Axis" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="FD.CraftUp" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="46" style="set-variable">
+          <Constant text="Flatten_Yaw" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="normalize (v:Yaw_Axis - project (v:Yaw_Axis, v:Current_Position))" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="47" style="set-variable">
+          <Constant text="Roll_Axis" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="FD.CraftForward" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="48" style="set-variable">
+          <Constant text="Flatten_Roll" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="normalize (v:Roll_Axis - project (v:Roll_Axis, v:Current_Position))" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="49" style="set-variable">
+          <Constant text="North_Vector" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="FD.North" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="50" style="set-variable">
+          <Constant text="East_Vector" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="FD.East" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="51" style="set-variable">
+          <Constant text="Player_Craft" />
+          <CraftProperty property="Craft.IsPlayer" style="craft">
+            <CraftProperty property="Craft.NameToID" style="craft-id">
+              <CraftProperty property="Name.Craft" style="prop-name" />
+            </CraftProperty>
+          </CraftProperty>
+        </SetVariable>
+        <Comment id="52" style="comment">
+          <Constant style="comment-text" canReplace="false" text="Speed Controller" />
+        </Comment>
+        <SetVariable id="53" style="set-variable">
+          <Constant text="Speed_Error" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="Set_Speed - magnitude (v:Surface_Velocity)" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="54" style="set-variable">
+          <Constant text="Speed_Proportional" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="Speed_Error" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="55" style="set-variable">
+          <Constant text="Speed_Integral" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="(abs (Speed_Error) &gt; 5 | FD.Grounded)? 0 : (Speed_Integral + Speed_Error)" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="56" style="set-variable">
+          <Constant text="Speed_Output" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="1.0 * Speed_Proportional + 0.02 * Speed_Integral" />
+          </EvaluateExpression>
+        </SetVariable>
+        <Comment id="57" style="comment">
+          <Constant style="comment-text" canReplace="false" text="Altitude Error" />
+        </Comment>
+        <SetVariable id="58" style="set-variable">
+          <Constant text="Altitude_Error" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="Set_Altitude - Current_Altitude" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="59" style="set-variable">
+          <Constant text="Altitude_Proportional" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="Altitude_Error" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="60" style="set-variable">
+          <Constant text="Altitude_Integral" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="(abs (Altitude_Error) &gt; 10 | FD.Grounded)? 0 : (Altitude_Integral + Altitude_Error)" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="61" style="set-variable">
+          <Constant text="Altitude_Output" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="1.0 * Altitude_Proportional  + 0.02 * Altitude_Integral" />
+          </EvaluateExpression>
+        </SetVariable>
+        <Comment id="62" style="comment">
+          <Constant style="comment-text" canReplace="false" text="Pitch Controller" />
+        </Comment>
+        <SetVariable id="63" style="set-variable">
+          <Constant text="Set_Pitch" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="min (20, max (-20, Altitude_Output))" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="64" style="set-variable">
+          <Constant text="Pitch_Error" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="Set_Pitch - FD.Pitch" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="65" style="set-variable">
+          <Constant text="Pitch_Proportional" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="Pitch_Error" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="66" style="set-variable">
+          <Constant text="Pitch_Integral" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="(abs (Pitch_Error) &gt; 2 | FD.Grounded)? 0 : (Pitch_Integral + Pitch_Error)" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="67" style="set-variable">
+          <Constant text="Pitch_Derivative" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="x (v:Angular_Velocity)" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="68" style="set-variable">
+          <Constant text="Pitch_Output" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="0.04 * Pitch_Proportional + 0.001 * Pitch_Integral + 0.06 * Pitch_Derivative" />
+          </EvaluateExpression>
+        </SetVariable>
+        <Comment id="69" style="comment">
+          <Constant style="comment-text" canReplace="false" text="Heading Error" />
+        </Comment>
+        <SetVariable id="70" style="set-variable">
+          <Constant text="Target_Heading" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="v:Alignment_Vector" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="71" style="set-variable">
+          <Constant text="Velocity_Vector" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="magnitude (v:Surface_Velocity) &gt; 0.2? 1*(v:Surface_Velocity - project (v:Surface_Velocity, v:Current_Position)) : 1*(v:Flatten_Roll)" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="72" style="set-variable">
+          <Constant text="Target_Vector" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="normalize (v:Target_Heading - project (v:Target_Heading, v:Current_Position))" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="73" style="set-variable">
+          <Constant text="Bearing_Vector" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="normalize (cross (v:Current_Position, v:Target_Vector))" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="74" style="set-variable">
+          <Constant text="Heading_Error" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="(dot (v:Velocity_Vector, v:Bearing_Vector) &lt;0? 1 : -1) * angle (v:Target_Vector, v:Velocity_Vector)" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="75" style="set-variable">
+          <Constant text="Heading_Proportional" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="Heading_Error" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="76" style="set-variable">
+          <Constant text="Heading_Output" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="Heading_Proportional" />
+          </EvaluateExpression>
+        </SetVariable>
+        <Comment id="77" style="comment">
+          <Constant style="comment-text" canReplace="false" text="Roll Controller" />
+        </Comment>
+        <SetVariable id="78" style="set-variable">
+          <Constant text="Set_Roll" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="min (60, max (-60, 7.5 * Heading_Output))" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="79" style="set-variable">
+          <Constant text="Roll_Error" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="FD.BankAngle - Set_Roll" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="80" style="set-variable">
+          <Constant text="Roll_Proportional" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="Roll_Error" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="81" style="set-variable">
+          <Constant text="Roll_Integral" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="(abs (Roll_Error) &gt; 2 | FD.Grounded)? 0 : (Roll_Integral + Roll_Error)" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="82" style="set-variable">
+          <Constant text="Roll_Derivative" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="z (v:Angular_Velocity)" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="83" style="set-variable">
+          <Constant text="Roll_Output" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="0.05 * Roll_Proportional + 0.002 * Roll_Integral + 0.08 * Roll_Derivative" />
+          </EvaluateExpression>
+        </SetVariable>
+        <Comment id="84" style="comment">
+          <Constant style="comment-text" canReplace="false" text="Silder Inputs" />
+        </Comment>
+        <SetInput input="slider1" id="85" style="set-input">
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="Pitch_Output" />
+          </EvaluateExpression>
+        </SetInput>
+        <SetInput input="slider2" id="86" style="set-input">
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="FD.Grounded? 0 : Roll_Output" />
+          </EvaluateExpression>
+        </SetInput>
+        <SetInput input="slider3" id="87" style="set-input">
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="y (v:Angular_Velocity)" />
+          </EvaluateExpression>
+        </SetInput>
+        <SetInput input="slider4" id="88" style="set-input">
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="abs (Speed_Output)" />
+          </EvaluateExpression>
+        </SetInput>
+        <SetInput input="translateUp" id="89" style="set-input">
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="-Speed_Output" />
+          </EvaluateExpression>
+        </SetInput>
+        <Comment id="90" style="comment">
+          <Constant style="comment-text" canReplace="false" text="Landing Gear Activation" />
+        </Comment>
+        <SetActivationGroup id="91" style="set-ag">
+          <Constant text="2" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="((Current_Altitude - Runway_Altitude) &lt; 50 | FD.Grounded)? true : false" />
+          </EvaluateExpression>
+        </SetActivationGroup>
+        <Comment id="92" style="comment">
+          <Constant style="comment-text" canReplace="false" text="Flight Logs" />
+        </Comment>
+        <LogFlight id="93" style="flightlog">
+          <StringOp op="format" style="format">
+            <Constant text="&lt;color=#00FF80&gt;Pitch Error : {0:n2}°  |  Roll Error : {1:n2}°  |  Heading Error : {2:n2}°" />
+            <EvaluateExpression style="evaluate-expression">
+              <Constant text="Pitch_Error" />
+            </EvaluateExpression>
+            <EvaluateExpression style="evaluate-expression">
+              <Constant text="Roll_Error" />
+            </EvaluateExpression>
+            <EvaluateExpression style="evaluate-expression">
+              <Constant text="Heading_Error" />
+            </EvaluateExpression>
+            <Constant text="" />
+          </StringOp>
+          <Constant style="true" bool="true" />
+        </LogFlight>
+        <LogFlight id="94" style="flightlog">
+          <StringOp op="format" style="format">
+            <Constant text="&lt;color=#FFFF00&gt;Speed Error : {0:n2}ms¹  |  Altitude Error : {1:n2}m  |  Target Distance : {2:n0}m" />
+            <EvaluateExpression style="evaluate-expression">
+              <Constant text="Speed_Error" />
+            </EvaluateExpression>
+            <EvaluateExpression style="evaluate-expression">
+              <Constant text="Altitude_Error" />
+            </EvaluateExpression>
+            <EvaluateExpression style="evaluate-expression">
+              <Constant text="magnitude ((AG4? 1*v:Runway_Position : 1*v:HoverArrow_Position) - v:Current_Position)" />
+            </EvaluateExpression>
+            <Constant text="" />
+          </StringOp>
+          <Constant style="true" bool="true" />
+        </LogFlight>
+        <WaitSeconds id="95" style="wait-seconds">
+          <Constant text="0" />
+        </WaitSeconds>
+      </Instructions>
+    </While>
+  </Instructions>
+  <Instructions>
+    <Event event="ReceiveMessage" id="96" style="receive-msg" pos="-304.7632,-4571.889">
+      <Constant canReplace="false" text="Start Takeoff Program" />
+    </Event>
+    <Comment id="97" style="comment">
+      <Constant style="comment-text" canReplace="false" text="Take Off Procedure" />
+    </Comment>
+    <SetVariable id="98" style="set-variable">
+      <Constant text="Set_Speed" />
+      <Constant text="130" />
+    </SetVariable>
+    <SetVariable id="99" style="set-variable">
+      <Constant text="Max_Altitude" />
+      <Constant text="100" />
+    </SetVariable>
+    <SetVariable id="100" style="set-variable">
+      <Constant text="Set_Altitude" />
+      <EvaluateExpression style="evaluate-expression">
+        <Constant text="Runway_Altitude + Max_Altitude" />
+      </EvaluateExpression>
+    </SetVariable>
+    <WaitSeconds id="101" style="wait-seconds">
+      <Constant text="2" />
+    </WaitSeconds>
+    <While id="102" style="while">
+      <EvaluateExpression style="evaluate-expression">
+        <Constant text="Current_Altitude &lt; (Runway_Altitude + Max_Altitude)" />
+      </EvaluateExpression>
+      <Instructions>
+        <SetVariable id="103" style="set-variable">
+          <Constant text="Face_Vector" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="v:Runway_Position + v:Runway_Vector * (dot ((v:Current_Position - v:Runway_Position), v:Runway_Vector) + 400)" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="104" style="set-variable">
+          <Constant text="Alignment_Vector" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="v:Face_Vector - project (v:Face_Vector, v:Current_Position)" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetTarget id="105" style="set-target">
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="Player_Craft? 1*(FD.Position + v:Alignment_Vector) : 1*(FD.Position)" />
+          </EvaluateExpression>
+        </SetTarget>
+        <WaitSeconds id="106" style="wait-seconds">
+          <Constant text="0" />
+        </WaitSeconds>
+      </Instructions>
+    </While>
+    <SetTarget id="107" style="set-target">
+      <Constant text="None" />
+    </SetTarget>
+    <WaitSeconds id="108" style="wait-seconds">
+      <Constant text="4" />
+    </WaitSeconds>
+    <BroadcastMessage global="false" local="false" id="109" style="broadcast-msg-craft">
+      <Constant text="Start Auto Follow Program" />
+      <Variable list="false" local="true" variableName="data" />
+    </BroadcastMessage>
+  </Instructions>
+  <Instructions>
+    <Event event="ReceiveMessage" id="110" style="receive-msg" pos="-304.3683,-5259.026">
+      <Constant canReplace="false" text="Start Auto Follow Program" />
+    </Event>
+    <Comment id="111" style="comment">
+      <Constant style="comment-text" canReplace="false" text="Create The Alignment Point" />
+    </Comment>
+    <SetVariable id="112" style="set-variable">
+      <Constant text="Target_Length" />
+      <Constant text="00" />
+    </SetVariable>
+    <SetVariable id="113" style="set-variable">
+      <Constant text="Alignment_Length" />
+      <Constant text="5000" />
+    </SetVariable>
+    <While id="114" style="while">
+      <EvaluateExpression style="evaluate-expression">
+        <Constant text="(Target_Length &lt; (Alignment_Length - 100)) &amp; (!AG4)" />
+      </EvaluateExpression>
+      <Instructions>
+        <SetVariable id="115" style="set-variable">
+          <Constant text="Heading_Vector" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="v:Runway_Vector" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="116" style="set-variable">
+          <Constant text="Target_Position" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="v:HoverArrow_Position" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="117" style="set-variable">
+          <Constant text="Cross_Vector" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="normalize (cross (v:Current_Position, v:Runway_Vector))" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="118" style="set-variable">
+          <Constant text="Heading_Position" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="v:Target_Position + (v:Heading_Vector + 0.5 * v:Cross_Vector) * Alignment_Length" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="119" style="set-variable">
+          <Constant text="Alignment_Vector" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="v:Heading_Position - project (v:Heading_Position, v:Current_Position)" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="120" style="set-variable">
+          <Constant text="Target_Length" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="dot ((v:Current_Position - v:Target_Position), v:Heading_Vector)" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetTarget id="121" style="set-target">
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="Player_Craft? 1*(FD.Position + v:Alignment_Vector) : 1*(FD.Position)" />
+          </EvaluateExpression>
+        </SetTarget>
+        <WaitSeconds id="122" style="wait-seconds">
+          <Constant text="0" />
+        </WaitSeconds>
+      </Instructions>
+    </While>
+    <Comment id="123" style="comment">
+      <Constant style="comment-text" canReplace="false" text="Fly Back To The Target" />
+    </Comment>
+    <While id="124" style="while">
+      <EvaluateExpression style="evaluate-expression">
+        <Constant text="(Target_Length &gt; 0) &amp; (!AG4)" />
+      </EvaluateExpression>
+      <Instructions>
+        <SetVariable id="125" style="set-variable">
+          <Constant text="Heading_Vector" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="v:Runway_Vector" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="126" style="set-variable">
+          <Constant text="Target_Position" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="v:HoverArrow_Position" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="127" style="set-variable">
+          <Constant text="Heading_Position" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="v:Target_Position + v:Heading_Vector * (dot ((v:Current_Position - v:Target_Position), v:Heading_Vector) - 400)" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="128" style="set-variable">
+          <Constant text="Alignment_Vector" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="v:Heading_Position - project (v:Heading_Position, v:Current_Position)" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="129" style="set-variable">
+          <Constant text="Target_Length" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="dot ((v:Current_Position - v:Target_Position), v:Heading_Vector)" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetTarget id="130" style="set-target">
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="Player_Craft? 1*(FD.Position + v:Alignment_Vector) : 1*(FD.Position)" />
+          </EvaluateExpression>
+        </SetTarget>
+        <WaitSeconds id="131" style="wait-seconds">
+          <Constant text="0" />
+        </WaitSeconds>
+      </Instructions>
+    </While>
+    <BroadcastMessage global="false" local="false" id="132" style="broadcast-msg-craft">
+      <Conditional style="conditional">
+        <EvaluateExpression style="evaluate-expression">
+          <Constant text="AG4" />
+        </EvaluateExpression>
+        <Constant text="Start The Landing Program" />
+        <Constant text="Start Auto Follow Program" />
+      </Conditional>
+      <Variable list="false" local="true" variableName="data" />
+    </BroadcastMessage>
+  </Instructions>
+  <Instructions>
+    <Event event="ReceiveMessage" id="133" style="receive-msg" pos="-304.4519,-6367.406">
+      <Constant canReplace="false" text="Start The Landing Program" />
+    </Event>
+    <Comment id="134" style="comment">
+      <Constant style="comment-text" canReplace="false" text="Create The Alignment Point" />
+    </Comment>
+    <LogFlight id="135" style="flightlog">
+      <Constant text="&lt;color=#FF0000&gt;Auto Landing Program Has Started" />
+      <Constant style="true" bool="true" />
+    </LogFlight>
+    <SetVariable id="136" style="set-variable">
+      <Constant text="Target_Length" />
+      <Constant text="00" />
+    </SetVariable>
+    <SetVariable id="137" style="set-variable">
+      <Constant text="Alignment_Length" />
+      <Constant text="5000" />
+    </SetVariable>
+    <While id="138" style="while">
+      <EvaluateExpression style="evaluate-expression">
+        <Constant text="Target_Length &lt; (Alignment_Length - 100)" />
+      </EvaluateExpression>
+      <Instructions>
+        <SetActivationGroup id="139" style="set-ag">
+          <Constant text="4" />
+          <Constant style="true" bool="true" />
+        </SetActivationGroup>
+        <SetVariable id="140" style="set-variable">
+          <Constant text="Heading_Vector" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="v:Runway_Vector" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="141" style="set-variable">
+          <Constant text="Target_Position" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="v:Runway_Position" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="142" style="set-variable">
+          <Constant text="Cross_Vector" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="normalize (cross (v:Current_Position, v:Runway_Vector))" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="143" style="set-variable">
+          <Constant text="Heading_Position" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="v:Target_Position + (v:Heading_Vector + 0.5 * v:Cross_Vector) * Alignment_Length" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="144" style="set-variable">
+          <Constant text="Alignment_Vector" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="v:Heading_Position - project (v:Heading_Position, v:Current_Position)" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="145" style="set-variable">
+          <Constant text="Target_Length" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="dot ((v:Current_Position - v:Target_Position), v:Heading_Vector)" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetTarget id="146" style="set-target">
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="Player_Craft? 1*(FD.Position + v:Alignment_Vector) : 1*(FD.Position)" />
+          </EvaluateExpression>
+        </SetTarget>
+        <WaitSeconds id="147" style="wait-seconds">
+          <Constant text="0" />
+        </WaitSeconds>
+      </Instructions>
+    </While>
+    <Comment id="148" style="comment">
+      <Constant style="comment-text" canReplace="false" text="Fly Back To The Target" />
+    </Comment>
+    <SetVariable id="149" style="set-variable">
+      <Constant text="Starting_Altitude" />
+      <EvaluateExpression style="evaluate-expression">
+        <Constant text="Current_Altitude" />
+      </EvaluateExpression>
+    </SetVariable>
+    <SetVariable id="150" style="set-variable">
+      <Constant text="Starting_Length" />
+      <EvaluateExpression style="evaluate-expression">
+        <Constant text="Current_Altitude * 3800 / (Runway_Altitude + Max_Altitude)" />
+      </EvaluateExpression>
+    </SetVariable>
+    <While id="151" style="while">
+      <EvaluateExpression style="evaluate-expression">
+        <Constant text="! FD.Grounded" />
+      </EvaluateExpression>
+      <Instructions>
+        <SetActivationGroup id="152" style="set-ag">
+          <Constant text="4" />
+          <Constant style="true" bool="true" />
+        </SetActivationGroup>
+        <SetVariable id="153" style="set-variable">
+          <Constant text="Heading_Vector" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="v:Runway_Vector" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="154" style="set-variable">
+          <Constant text="Target_Position" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="v:Runway_Position" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="155" style="set-variable">
+          <Constant text="Heading_Position" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="v:Target_Position + v:Heading_Vector * (dot ((v:Current_Position - v:Target_Position), v:Heading_Vector) - 400)" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="156" style="set-variable">
+          <Constant text="Alignment_Vector" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="v:Heading_Position - project (v:Heading_Position, v:Current_Position)" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="157" style="set-variable">
+          <Constant text="Target_Length" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="dot ((project (v:Target_Position, v:Current_Position) - v:Target_Position), v:Heading_Vector)" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="158" style="set-variable">
+          <Constant text="Smooth_Value" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="max (0, (Target_Length - 800) / (Starting_Length - 800))" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="159" style="set-variable">
+          <Constant text="Set_Altitude" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="Target_Length &lt; Starting_Length? smoothstep ((Runway_Altitude - 1), Starting_Altitude, Smooth_Value) : Set_Altitude" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetVariable id="160" style="set-variable">
+          <Constant text="Set_Speed" />
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="Target_Length &lt; Starting_Length? smoothstep (50, 130, Smooth_Value) : Set_Speed" />
+          </EvaluateExpression>
+        </SetVariable>
+        <SetTarget id="161" style="set-target">
+          <EvaluateExpression style="evaluate-expression">
+            <Constant text="Player_Craft? 1*(FD.Position + v:Alignment_Vector) : 1*(FD.Position)" />
+          </EvaluateExpression>
+        </SetTarget>
+        <WaitSeconds id="162" style="wait-seconds">
+          <Constant text="0" />
+        </WaitSeconds>
+      </Instructions>
+    </While>
+    <SetTarget id="163" style="set-target">
+      <Constant text="None" />
+    </SetTarget>
+    <LogFlight id="164" style="flightlog">
+      <Constant text="&lt;color=#FFFFFF&gt;Auto Pilot Program Has Stopped" />
+      <Constant style="true" bool="true" />
+    </LogFlight>
+    <SetActivationGroup id="165" style="set-ag">
+      <Constant number="1" />
+      <Constant style="false" bool="false" />
+    </SetActivationGroup>
+    <WaitSeconds id="166" style="wait-seconds">
+      <Constant text="0.05" />
+    </WaitSeconds>
+    <SetInput input="brake" id="167" style="set-input">
+      <Constant text="1" />
+    </SetInput>
+    <SetInput input="slider1" id="168" style="set-input">
+      <Constant text="0" />
+    </SetInput>
+    <SetInput input="slider2" id="169" style="set-input">
+      <Constant text="0" />
+    </SetInput>
+    <SetInput input="slider3" id="170" style="set-input">
+      <Constant text="0" />
+    </SetInput>
+    <SetInput input="slider4" id="171" style="set-input">
+      <Constant text="0" />
+    </SetInput>
+  </Instructions>
+  <Expressions />
+</Program>
